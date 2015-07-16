@@ -1,0 +1,25 @@
+name: IpOp
+version: 1.0.0
+api: [1.12.0]
+main: IpOp\Main
+commands:
+  addip:
+   usage: /addip <player>
+   description: Adds an IpOp
+   permission: ipop.add
+  removeip:
+    usage: /removeip <player>
+    description: Removes an IpOp
+    permission: ipop.remove
+permissions:
+  ipop:
+    default: false
+    description: Allows the player to use all 
+    children:
+      ipop.add:
+        default: op
+        description: Allows the player to add an IpOp
+      ipop.remove:
+        default: op
+        description: Allows the player to remove an IpOp
+    
