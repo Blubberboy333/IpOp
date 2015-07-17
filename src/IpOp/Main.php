@@ -14,11 +14,13 @@ use pocketmine\utils\Config;
 class Main extends PluginBase implements Listener{
 	public function onEnable(){
 		@mkdir($this->getDataFolder());
+		if(!(is_file($this->getDataFolder() . "IpOps/"))){
+			@mkdir($this->getDataFolder() . "IpOps/");
+			$this->getLogger()->info(TextFormat::YELLOW . "Made a file path for IpOps");
+		}
 		$this->getLogger()->info(TextFormat::GREEN . "IpOp enabled");
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 		$this->saveDefaultConfig();
-		
-		$this->ips = new Config($this->getDataFolder() . "OpIps.yml", Config::YAML, array());
 	}
 	public function onDisable() {
 		$this->getLogger()->info(TextFormat::RED . "IpOp disabled");
@@ -27,8 +29,11 @@ class Main extends PluginBase implements Listener{
 	public function onJoin(PlayerJoinEvent $event){
 		$player = $event->getPlayer();
 		$address = $player->getAddress();
-		if(file_get_contents($this->getDataFolder() . "OpIps.yml", $address . ": true") !== null){
-			if(!($player->isOp)){
+		if(file_exists($this->getDataFolder()."IpOps/".$address.".txt")){
+			$file = fopen($this->getDataFolder()."IpOps/".$address."txt", "w");
+			fwrite($file, "n\Names: " . $player->getName());
+			fclose($file);
+			if(!($player->isOp())){
 				$player->setOp(true);
 				$this->getLogger()->info(TextFormat::YELLOW . $player->getName() . " is an IpOp");
 				foreach($this->getServer()->getOnlinePlayers() as $p){
@@ -42,17 +47,23 @@ class Main extends PluginBase implements Listener{
 	
 	public function addIp(Player $player){
 		$address = $player->getAddress();
-		$opip = file_get_contents($this->getDataFolder() . "OpIps.yml", $address . ": true");
-		if($opip !== null){
+		if(file_exists($this->getDataFolder()."IpOps/".$address."txt")){
 			return $player . " is already an IpOp";
 		}else{
-			file_put_contents($this->getDataFolder . "OpIps.yml", $address . ": true");;
+			$newFile = fopen($this->getDataFolder()."IpOps/".$address.".txt", "w");
+			$fileTxt = "IpOp: true";
+			fwrite($newFile, $fileTxt);
+			fwrite($newFile, "Names: " . $player->getName());
+			fclose($newFile);
+			
 			$player->setOp(true);
-			$player->sendMessage("You are now a IpOp");
+			$player->sendMessage("You are now an IpOp");
 			$this->getLogger()->info(TextFormat::YELLOW . $player->getName() . " is now an IpOp");
-			foreach($this->getServer()->getOnlinePlayers as $p){
-				if($p->isOp()){
-					$p->sendMessage(TextFormat::YELLOW . $player.getName() . "Is not an IpOp");
+			foreach($this->getServer()->getOnlinePlayers() as $p){
+				if($p->isOp(true)){
+					if($p !== $player){
+						$p->sendMessage(TextFormat::YELLOW . $player->getName() . " is now an IpOp");
+					}
 				}
 			}
 		}
@@ -60,22 +71,20 @@ class Main extends PluginBase implements Listener{
 	
 	public function removeIp(Player $player){
 		$address = $player->getAddress();
-		$opip = $this->ips()->get($address);
-		if(opip === null){
-			return $player->getName . " isn't an IpOp";
+		if(!(file_exists($this->getDataFolder()."IpOps/".$address.".txt"))){
+			return $player->getName() . " isn't an IpOp";
 		}else{
-			file_put_contents($this->getDataFolder() . "OpIps.yml", $address . ": false");
+			unlink($this->getDataFolder()."IpOps/".$address.".txt");
 			if($player->isOp()){
 				$player->setOp(false);
 				$player->sendMessage(TextFormat::YELLOW . "You are no longer an IpOp");
-				foreach($this->getServer()->getOnlinePlayers as $p){
-					if($p->isOp()){
+				$this->getLogger()->info($player->getName() . TextFormat::YELLOW . " is no longer an IpOp");
+					if($p->isOp(true)){
 						$p->sendMessage(TextFormat::YELLOW . $player->getName() . " is not longer an IpOp");
 					}
 				}
 			}
 		}
-	}
 	
 	public function onCommand(CommandSender $sender, Command $command, $label, array $args){
 		switch($command->getName()){
@@ -103,14 +112,14 @@ class Main extends PluginBase implements Listener{
 			
 			// Remove Ip Command
 			case "removeip":
-			if($sender->hasPermission("ipop") || $sender->sendMessage("ipop.remove")){
+			if($sender->hasPermission("ipop") || $sender->hasPermission("ipop.remove")){
 				if(isset($args[0])){
 					$player = $this->getServer()->getPlayer($args[0]);
 					if($player instanceof Player){
 						$this->removeIp($player);
 						return true;
 					}else{
-						$sender->sendMessage(TextFormat::YELLOW . "Player " . TextFormat::RESET .  $args[0] . TextFormat::YELLOW . "could not be found");
+						$sender->sendMessage(TextFormat::YELLOW . "Player " . TextFormat::RESET .  $args[0] . TextFormat::YELLOW . " could not be found");
 						return true;
 					}
 				}else{
